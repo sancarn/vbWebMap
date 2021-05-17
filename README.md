@@ -4,7 +4,9 @@ A simple map UI proof of concept written in VB6 compatible VBA
 
 ![example](docs/ReadmeImage.png)
 
-This map uses InternetExplorer COM object, boots up GeoJSON.io and uses the exposed API to construct the map.
+This map uses InternetExplorer COM object.
+
+> Important: This currently relies on [GeoJSON.io](http://GeoJSON.io). It would be a lot better if it relied on some github.io page. I.E. something that wouldn't go down. However, on the whole this could prove useful as a basis for more resilient works. :)
 
 The example supplied will visualise the linked table. Furthermore when you change row in Excel, the point displayed in the map will shift around also.
 
