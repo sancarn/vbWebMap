@@ -36,7 +36,6 @@ isIERunning                                                                    '
 Creates a geoJSON layer.
 
 ```vb
-With featureCol
 'Constructors
 create()
  
