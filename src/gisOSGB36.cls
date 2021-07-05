@@ -250,6 +250,7 @@ Private Function getEastingsNorthings(fLatitude As Double, fLongitude As Double)
 End Function
 
 Private Sub initLatLng()
+  'Find Latitude and Longitude in OSGB36
   ' Airy 1830 major & minor semi-axes
   Const a As Double = 6377563.396, b As Double = 6356256.909
   
@@ -258,7 +259,8 @@ Private Sub initLatLng()
   
   'NatGrid true origin is 49°N,2°W
   'Both 49 and -2 are converted to radians and hardcoded below
-  Const phi0 As Double = 0.85521133348, lambda0 As Double = -0.03490658504
+  Dim phi0 As Double: phi0 = toRad(49)
+  Dim lambda0 As Double: lambda0 = toRad(-2)
   
   'northing & easting of true origin, metres
   Const N0 As Double = -100000, E0 As Double = 400000
@@ -300,7 +302,7 @@ Private Sub initLatLng()
   Dim VII As Double: VII = tanphi / (2 * rho * nu)
   Dim VIII As Double: VIII = tanphi / (24 * rho * nu3) * (5 + 3 * tan2phi + eta2 - 9 * tan2phi * eta2)
   Dim IX As Double: IX = tanphi / (720 * rho * nu5) * (61 + 90 * tan2phi + 45 * tan4phi)
-  Dim X As Double: X = secphi / nu
+  Dim x As Double: x = secphi / nu
   Dim XI As Double: XI = secphi / (6 * nu3) * (nu / rho + 2 * tan2phi)
   Dim XII As Double: XII = secphi / (120 * nu5) * (5 + 28 * tan2phi + 24 * tan4phi)
   Dim XIIA As Double: XIIA = secphi / (5040 * nu7) * (61 + 662 * tan2phi + 1320 * tan4phi + 720 * tan6phi)
@@ -313,13 +315,63 @@ Private Sub initLatLng()
   Dim dE6 As Double: dE6 = dE4 * dE2
   Dim dE7 As Double: dE7 = dE5 * dE2
   phi = phi - VII * dE2 + VIII * dE4 - IX * dE6
-  Dim lambda As Double: lambda = lambda0 + X * dE - XI * dE3 + XII * dE5 - XIIA * dE7
+  Dim lambda As Double: lambda = lambda0 + x * dE - XI * dE3 + XII * dE5 - XIIA * dE7
+  
+  'Project lat,lng to WGS84
+  Dim vLatLng: vLatLng = projectToWGS84(toDeg(phi), toDeg(lambda))
   
   'Set latitude and longitude
   pLatLngAv = True
-  pLatitude = toDeg(phi)
-  pLongitude = toDeg(lambda)
+  pLatitude = vLatLng(0)
+  pLongitude = vLatLng(1)
 End Sub
+
+Private Function projectToWGS84(OGlat As Double, OGlon As Double) As Variant
+  'convert to radians
+  Dim radOGlat As Double: radOGlat = toRad(OGlat)
+  Dim radOGlon As Double: radOGlon = toRad(OGlon)
+  
+  'these are the values for WGS84(GRS80) to OSGB36(Airy)
+  Const a2 As Double = 6378137                ' WGS84_AXIS
+  Const e As Double = 0.0066705397616         ' OSGB_ECCENTRIC
+  Const e2 As Double = 6.69438037928458E-03   ' WGS84_ECCENTRIC
+  Const a As Double = 6377563.396             ' OSGB_AXIS
+  Const h As Double = 24                      ' Height above datum (from $GPGGA sentence); London's mean height above sea level is 24 metres. Adjust for other locations.
+  Const xp As Double = 446.448, yp As Double = -125.157, zp As Double = 542.06
+  Const xr As Double = 0.1502, yr As Double = 0.247, zr As Double = 0.8421
+  Const s As Double = -20.4894
+  
+  'convert to cartesian; lat, lon are in radians
+  Dim sf As Double: sf = -20.4894 * 0.000001
+  Dim v As Double: v = a / (Sqr(1 - (e * (Sin(radOGlat) * Sin(radOGlat)))))
+  Dim x As Double: x = (v + h) * Cos(radOGlat) * Cos(radOGlon)
+  Dim y As Double: y = (v + h) * Cos(radOGlat) * Sin(radOGlon)
+  Dim z As Double: z = ((1 - e) * v + h) * Sin(radOGlat)
+
+  'transform cartesian
+  Dim xrot As Double: xrot = toRad(xr / 3600)
+  Dim yrot As Double: yrot = toRad(yr / 3600)
+  Dim zrot As Double: zrot = toRad(zr / 3600)
+  Dim hx As Double: hx = x + (x * sf) - (y * zrot) + (z * yrot) + xp
+  Dim hy As Double: hy = (x * zrot) + y + (y * sf) - (z * xrot) + yp
+  Dim hz As Double: hz = (-1 * x * yrot) + (y * xrot) + z + (z * sf) + zp
+
+  'Convert back to lat, lon
+  Dim newLon As Double: newLon = Atn(hy / hx)
+  Dim p As Double: p = Sqr((hx * hx) + (hy * hy))
+  Dim newLat As Double: newLat = Atn(hz / (p * (1 - e2)))
+  v = a2 / (Sqr(1 - e2 * (Sin(newLat) * Sin(newLat))))
+  Dim errValue As Double: errValue = 1#
+  Dim lat0 As Double: lat0 = 0
+  Do While (errValue > 0.001)
+    lat0 = Atn((hz + e2 * v * Sin(newLat)) / p)
+    errValue = Abs(lat0 - newLat)
+    newLat = lat0
+  Loop
+
+  'convert back to degrees and return
+  projectToWGS84 = Array(toDeg(newLat), toDeg(newLon))
+End Function
 
 Private Function toRad(ByVal deg As Double) As Double
   Const PI As Double = 3.1415926535
