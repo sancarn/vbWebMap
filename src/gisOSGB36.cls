@@ -19,7 +19,7 @@ Implements gisIPoint
 '  own references
 '
 '  Note that these formulae are based on ellipsoidal calculations, and according to the OS are
-'  accurate to about 4–5 metres – for greater accuracy, a geoid-based transformation (OSTN15) must
+'  accurate to about 4â€“5 metres â€“ for greater accuracy, a geoid-based transformation (OSTN15) must
 '  be used
 
 'Version History:
@@ -27,12 +27,16 @@ Implements gisIPoint
 '  * 2021-05-16 Intiial VBA version by [Sancarn](http://github.com/sancarn)
 
 
-
+Public Enum EGoogleMapsBaseMaps
+    GoogleBaseMapRoadMap
+    GoogleBaseMapSatelite
+    GoogleBaseMapTerrain
+End Enum
 
 
 
 'Note that these formulae are based on ellipsoidal calculations, and according to the OS are
-'accurate to about 4–5 metres – for greater accuracy, a geoid-based transformation (OSTN15) must
+'accurate to about 4â€“5 metres â€“ for greater accuracy, a geoid-based transformation (OSTN15) must
 'be used.
 '
 'Note Original was converted in 2015 to work with WGS84 by default, OSGB36 as option;
@@ -145,7 +149,23 @@ End Property
 
 
 
-
+'Obtaining URL's for various systems
+Public Property Get URLGoogleEarth(Optional ByVal iScaling As Long = 100000) As String
+    URLGoogleEarth = "https://earth.google.com/web/@" & Latitude & "," & Longitude & "," & iScaling & "d"
+End Property
+Public Property Get URLGoogleMaps(Optional ByVal iZoom As Long = 17, Optional iBaseMap As EGoogleMapsBaseMaps = EGoogleMapsBaseMaps.GoogleBaseMapRoadMap) As String
+    Dim sBaseMap As String
+    Select Case iBaseMap
+        Case EGoogleMapsBaseMaps.GoogleBaseMapRoadMap:  sBaseMap = "roadmap"
+        Case EGoogleMapsBaseMaps.GoogleBaseMapSatelite: sBaseMap = "satellite"
+        Case EGoogleMapsBaseMaps.GoogleBaseMapTerrain:  sBaseMap = "terrain"
+    End Select
+    
+    URLGoogleMaps = "https://www.google.com/maps/@?api=1&map_action=map&center=" & Latitude & "," & Longitude & "&zoom=" & iZoom & "&basemap=" & sBaseMap
+End Property
+Public Property Get URLGoogleStreetView() As String
+    URLGoogleStreetView = "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" & Latitude & "," & Longitude
+End Property
 
 
 
@@ -173,7 +193,7 @@ Private Function getEastingsNorthings(fLatitude As Double, fLongitude As Double)
   'NatGrid scale factor on central meridian
   Const F0 As Double = 0.9996012717
 
-  'NatGrid true origin is 49°N,2°W
+  'NatGrid true origin is 49Â°N,2Â°W
   Dim phi0 As Double: phi0 = toRad(49)
   Dim lambda0 As Double: lambda0 = toRad(-2)
 
@@ -183,7 +203,7 @@ Private Function getEastingsNorthings(fLatitude As Double, fLongitude As Double)
   'eccentricity squared
   Dim e2 As Double: e2 = 1 - (b * b) / (a * a)
 
-  'n, n², n³
+  'n, nÂ², nÂ³
   Dim n As Double: n = (a - b) / (a + b)
   Dim n2 As Double: n2 = n * n
   Dim n3 As Double: n3 = n2 * n
@@ -236,7 +256,7 @@ Private Sub initLatLng()
   'NatGrid scale factor on central meridian
   Const F0 As Double = 0.9996012717
   
-  'NatGrid true origin is 49°N,2°W
+  'NatGrid true origin is 49Â°N,2Â°W
   'Both 49 and -2 are converted to radians and hardcoded below
   Const phi0 As Double = 0.85521133348, lambda0 As Double = -0.03490658504
   
@@ -246,7 +266,7 @@ Private Sub initLatLng()
   'eccentricity squared
   Dim e2 As Double: e2 = 1 - (b * b) / (a * a)
   
-  'n, n², n³
+  'n, nÂ², nÂ³
   Dim n As Double: n = (a - b) / (a + b)
   Dim n2 As Double: n2 = n * n
   Dim n3 As Double: n3 = n2 * n
